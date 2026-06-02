@@ -1,3 +1,7 @@
+/*
+ * Original author: Camila Cavalcante
+ * Modifications and improvements: Saulo Henrique de Castro
+ */
 package me.dio.credit.application.system.service.impl
 
 import me.dio.credit.application.system.entity.Credit
@@ -15,12 +19,19 @@ class CreditService(
   private val customerService: CustomerService
 ) : ICreditService {
   override fun save(credit: Credit): Credit {
+    this.validNumberOfInstallments(credit.numberOfInstallments)
     this.validDayFirstInstallment(credit.dayFirstInstallment)
     credit.apply {
       customer = customerService.findById(credit.customer?.id!!)
     }
     return this.creditRepository.save(credit)
   }
+
+  private fun validNumberOfInstallments(number: Int): Boolean {
+    return if (number in 1..48) true
+    else throw BusinessException("Number of installments must be between 1 and 48")
+  }
+
 
   override fun findAllByCustomer(customerId: Long): List<Credit> =
     this.creditRepository.findAllByCustomerId(customerId)
@@ -38,8 +49,12 @@ class CreditService(
   }
 
   private fun validDayFirstInstallment(dayFirstInstallment: LocalDate): Boolean {
-    return if (dayFirstInstallment.isBefore(LocalDate.now().plusMonths(3))) true
-    else throw BusinessException("Invalid Date")
+    val today = LocalDate.now()
+    val maxDate = today.plusMonths(3)
+
+    return if (dayFirstInstallment.isAfter(today) && dayFirstInstallment.isBefore(maxDate)) true
+    else throw BusinessException("First installment date must be between tomorrow and $maxDate")
   }
+
 }
 
